@@ -1,0 +1,42 @@
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+gunicorn>=23.0.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.9
+alembic>=1.14.0
+
+# Validation
+pydantic>=2.9.0
+python-multipart>=0.0.12
+
+# Auth
+PyJWT>=2.9.0
+passlib[bcrypt]>=1.7.4
+
+# Config
+python-dotenv>=1.0.0
+
+# Observability
+sentry-sdk[fastapi]>=2.19.0
+
+# AI / agents
+anthropic>=0.40.0
+langgraph>=0.2.0
+langsmith>=0.1.0
+
+# Cache
+redis>=5.0.0
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Observability — metrics
+prometheus-fastapi-instrumentator>=7.0.0
+
+# Data
+faker>=30.0.0
+openpyxl>=3.1.0
+pandas>=2.2.0

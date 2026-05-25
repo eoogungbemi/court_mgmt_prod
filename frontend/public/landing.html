@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OnDocket — Court Case Management Software</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:      #1a2e4a;
+      --navy-deep: #0f1e30;
+      --gold:      #c9a84c;
+      --gold-lt:   #e8c97a;
+      --slate:     #4a5568;
+      --gray-50:   #f8fafc;
+      --gray-100:  #f1f5f9;
+      --gray-200:  #e2e8f0;
+      --gray-500:  #64748b;
+      --gray-700:  #374151;
+      --white:     #ffffff;
+      --radius:    12px;
+      --shadow:    0 4px 24px rgba(26,46,74,.10);
+      --shadow-lg: 0 8px 40px rgba(26,46,74,.16);
+    }
+
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Inter", system-ui, sans-serif;
+      background: var(--white);
+      color: var(--gray-700);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── NAV ──────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(26,46,74,.97);
+      backdrop-filter: blur(10px);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2rem; height: 64px;
+      border-bottom: 1px solid rgba(201,168,76,.25);
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: .6rem;
+      color: var(--white); text-decoration: none;
+    }
+    .nav-logo .wordmark { font-size: 1.25rem; font-weight: 800; letter-spacing: -.5px; }
+    .nav-logo .tagline  { font-size: .7rem; color: var(--gold); font-weight: 500; letter-spacing: .5px; text-transform: uppercase; }
+    .nav-links { display: flex; align-items: center; gap: 1.5rem; }
+    .nav-links a { color: rgba(255,255,255,.75); text-decoration: none; font-size: .9rem; font-weight: 500; transition: color .2s; }
+    .nav-links a:hover { color: var(--gold); }
+    .btn-signin {
+      background: transparent; color: var(--white);
+      border: 1.5px solid rgba(255,255,255,.3);
+      padding: .4rem 1rem; border-radius: 6px; font-weight: 600;
+      font-size: .875rem; text-decoration: none;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-signin:hover { border-color: var(--gold); color: var(--gold) !important; }
+    .btn-demo {
+      background: var(--gold); color: var(--navy-deep); border: none;
+      padding: .45rem 1.1rem; border-radius: 6px; font-weight: 700;
+      font-size: .875rem; cursor: pointer; text-decoration: none;
+      transition: background .2s, transform .1s;
+    }
+    .btn-demo:hover { background: var(--gold-lt); transform: translateY(-1px); }
+
+    /* ── HERO ─────────────────────────────────────────────── */
+    .hero {
+      background: linear-gradient(135deg, var(--navy-deep) 0%, var(--navy) 60%, #1e3d5c 100%);
+      color: var(--white);
+      padding: 6rem 2rem 5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 100%, rgba(201,168,76,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: rgba(201,168,76,.15); border: 1px solid rgba(201,168,76,.3);
+      color: var(--gold); font-size: .78rem; font-weight: 600;
+      letter-spacing: .5px; text-transform: uppercase;
+      padding: .35rem .9rem; border-radius: 99px; margin-bottom: 1.75rem;
+    }
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.6rem);
+      font-weight: 800; letter-spacing: -1.5px; line-height: 1.1;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 em { color: var(--gold); font-style: normal; }
+    .hero p {
+      font-size: clamp(1rem, 2.5vw, 1.2rem);
+      color: rgba(255,255,255,.75); max-width: 620px; margin: 0 auto 2.5rem;
+    }
+    .hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--gold); color: var(--navy-deep);
+      padding: .85rem 2rem; border-radius: 8px; font-weight: 700; font-size: 1rem;
+      text-decoration: none; transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: var(--gold-lt); transform: translateY(-2px); }
+    .btn-outline {
+      background: transparent; color: var(--white);
+      border: 1.5px solid rgba(255,255,255,.35);
+      padding: .85rem 2rem; border-radius: 8px; font-weight: 600; font-size: 1rem;
+      text-decoration: none; transition: border-color .2s, transform .15s;
+      display: inline-block;
+    }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); transform: translateY(-2px); }
+
+    /* ── STAT BAR ─────────────────────────────────────────── */
+    .stat-bar {
+      background: var(--gray-50);
+      border-bottom: 1px solid var(--gray-200);
+      display: flex; justify-content: center; flex-wrap: wrap;
+      gap: 0;
+    }
+    .stat-item {
+      padding: 1.5rem 2.5rem;
+      text-align: center;
+      border-right: 1px solid var(--gray-200);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-number { font-size: 1.75rem; font-weight: 800; color: var(--navy); line-height: 1; }
+    .stat-label  { font-size: .8rem; color: var(--gray-500); font-weight: 500; margin-top: .25rem; }
+
+    /* ── SECTIONS ─────────────────────────────────────────── */
+    section { padding: 5rem 2rem; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .section-label {
+      display: inline-block;
+      font-size: .75rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+      color: var(--gold); margin-bottom: .75rem;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 3vw, 2.2rem); font-weight: 800;
+      color: var(--navy); letter-spacing: -.5px; line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    .section-sub {
+      font-size: 1.05rem; color: var(--gray-500); max-width: 600px; margin-bottom: 3rem;
+    }
+
+    /* ── FEATURE GRID ─────────────────────────────────────── */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+    .feature-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      box-shadow: var(--shadow);
+      transition: box-shadow .2s, transform .2s, border-color .2s;
+    }
+    .feature-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-3px);
+      border-color: rgba(201,168,76,.4);
+    }
+    .feature-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--navy), #1e3d5c);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1rem;
+      font-size: 1.2rem;
+    }
+    .feature-number {
+      font-size: .7rem; font-weight: 700; letter-spacing: 1px;
+      color: var(--gold); text-transform: uppercase; margin-bottom: .4rem;
+    }
+    .feature-title {
+      font-size: 1.05rem; font-weight: 700; color: var(--navy);
+      margin-bottom: .75rem; line-height: 1.3;
+    }
+    .feature-list {
+      list-style: none;
+      display: flex; flex-direction: column; gap: .5rem;
+    }
+    .feature-list li {
+      font-size: .875rem; color: var(--slate);
+      display: flex; gap: .5rem; align-items: flex-start;
+    }
+    .feature-list li::before {
+      content: "›";
+      color: var(--gold); font-weight: 700; flex-shrink: 0;
+      margin-top: .05rem;
+    }
+
+    /* ── ROLES SECTION ────────────────────────────────────── */
+    .roles-bg { background: var(--gray-50); }
+    .roles-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+    }
+    .role-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: var(--radius);
+      padding: 1.5rem 1.25rem;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .role-icon { font-size: 2rem; margin-bottom: .75rem; }
+    .role-name { font-weight: 700; color: var(--navy); font-size: .95rem; margin-bottom: .5rem; }
+    .role-desc { font-size: .8rem; color: var(--gray-500); line-height: 1.4; }
+
+    /* ── DIFFERENTIATORS ──────────────────────────────────── */
+    .diff-bg { background: var(--navy); color: var(--white); }
+    .diff-bg .section-title { color: var(--white); }
+    .diff-bg .section-sub   { color: rgba(255,255,255,.65); }
+    .diff-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+    .diff-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(201,168,76,.2);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      transition: background .2s, border-color .2s;
+    }
+    .diff-card:hover {
+      background: rgba(255,255,255,.09);
+      border-color: rgba(201,168,76,.5);
+    }
+    .diff-card-icon { font-size: 1.5rem; margin-bottom: 1rem; }
+    .diff-card-title { font-size: 1rem; font-weight: 700; color: var(--gold); margin-bottom: .6rem; }
+    .diff-card-body  { font-size: .875rem; color: rgba(255,255,255,.7); line-height: 1.6; }
+
+    /* ── AI SPOTLIGHT ─────────────────────────────────────── */
+    .ai-section { background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%); }
+    .ai-inner {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 4rem; align-items: center;
+    }
+    @media (max-width: 720px) { .ai-inner { grid-template-columns: 1fr; gap: 2rem; } }
+    .ai-graphic {
+      background: var(--navy);
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: var(--shadow-lg);
+      color: var(--white);
+    }
+    .ai-graphic-title { font-size: .75rem; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--gold); margin-bottom: 1.25rem; }
+    .hearing-row {
+      background: rgba(255,255,255,.07);
+      border-radius: 8px; padding: .9rem 1rem;
+      margin-bottom: .75rem;
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: .85rem;
+    }
+    .hearing-row:last-child { margin-bottom: 0; }
+    .hearing-info { display: flex; flex-direction: column; gap: .2rem; }
+    .hearing-case { font-weight: 600; color: var(--white); }
+    .hearing-type { font-size: .75rem; color: rgba(255,255,255,.5); }
+    .hearing-eta  { text-align: right; }
+    .eta-range  { font-weight: 700; color: var(--gold); font-size: .9rem; }
+    .eta-label  { font-size: .7rem; color: rgba(255,255,255,.4); }
+    .status-badge {
+      font-size: .7rem; font-weight: 600; padding: .2rem .6rem; border-radius: 99px;
+    }
+    .s-inprog  { background: rgba(99,102,241,.25); color: #a5b4fc; }
+    .s-sched   { background: rgba(201,168,76,.15); color: var(--gold); }
+    .s-done    { background: rgba(34,197,94,.15); color: #86efac; }
+
+    /* ── CTA ──────────────────────────────────────────────── */
+    .cta-section {
+      background: linear-gradient(135deg, var(--navy-deep), var(--navy));
+      color: var(--white); text-align: center; padding: 6rem 2rem;
+    }
+    .cta-section h2 {
+      font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800;
+      letter-spacing: -.5px; margin-bottom: 1rem;
+    }
+    .cta-section p { color: rgba(255,255,255,.7); font-size: 1.05rem; max-width: 520px; margin: 0 auto 2.5rem; }
+    .cta-group { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .contact-link {
+      color: var(--gold); text-decoration: none; font-weight: 600;
+      border-bottom: 1px solid rgba(201,168,76,.4); padding-bottom: 1px;
+    }
+    .contact-link:hover { border-color: var(--gold); }
+
+    /* ── FOOTER ───────────────────────────────────────────── */
+    footer {
+      background: var(--navy-deep);
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 2rem;
+      display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;
+    }
+    footer .foot-logo { color: var(--white); font-weight: 800; font-size: 1rem; letter-spacing: -.3px; }
+    footer .foot-logo span { color: var(--gold); }
+    footer .foot-copy  { font-size: .8rem; color: rgba(255,255,255,.4); }
+
+    /* ── SCALE SVG ────────────────────────────────────────── */
+    .scale-svg { width: 22px; height: 22px; fill: var(--gold); }
+
+    @media (max-width: 640px) {
+      .stat-item { padding: 1.25rem 1.5rem; border-right: none; border-bottom: 1px solid var(--gray-200); }
+      .stat-item:last-child { border-bottom: none; }
+      nav { padding: 0 1rem; }
+      .nav-links { display: none; }
+      .nav-signin { display: inline-block; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <svg class="scale-svg" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 2L3 7v2h18V7L12 2zM5 11l-2 5a4 4 0 008 0l-2-5H5zm8 0l-2 5a4 4 0 008 0l-2-5h-4zM3 20h18v2H3v-2z"/>
+    </svg>
+    <div>
+      <div class="wordmark">OnDocket</div>
+      <div class="tagline">Court Management</div>
+    </div>
+  </a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#roles">Who It's For</a>
+    <a href="#ai">AI Engine</a>
+    <a href="#why">Why OnDocket</a>
+    <a href="#contact" class="btn-demo">Request Demo</a>
+  </div>
+  <a href="/login" class="btn-signin nav-signin">Sign In</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L3 7v2h18V7L12 2z"/></svg>
+    Built for Juvenile &amp; Family Courts
+  </div>
+  <h1>Your entire docket,<br/><em>live and in order.</em></h1>
+  <p>OnDocket replaces whiteboards, spreadsheets, and status calls with a unified real-time platform — built from the ground up for courts.</p>
+  <div class="hero-cta">
+    <a href="#contact" class="btn-primary">Request a Demo</a>
+    <a href="#features" class="btn-outline">See All Features</a>
+  </div>
+</section>
+
+<!-- STAT BAR -->
+<div class="stat-bar">
+  <div class="stat-item">
+    <div class="stat-number">10</div>
+    <div class="stat-label">Core Modules</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number">5</div>
+    <div class="stat-label">Role-Based Portals</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number">Real-Time</div>
+    <div class="stat-label">Queue Updates via WebSocket</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number">AI</div>
+    <div class="stat-label">Hearing Duration Estimates</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-number">100%</div>
+    <div class="stat-label">Audit Trail on Every Action</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <span class="section-label">Platform Features</span>
+    <h2 class="section-title">Everything a court needs,<br/>nothing it doesn't.</h2>
+    <p class="section-sub">Ten purpose-built modules covering every role in the courtroom — from the clerk's desk to the public gallery.</p>
+
+    <div class="feature-grid">
+
+      <div class="feature-card">
+        <div class="feature-icon">📺</div>
+        <div class="feature-number">Module 01</div>
+        <div class="feature-title">Live Courtroom Queue</div>
+        <ul class="feature-list">
+          <li>Families and attorneys see the real-time docket for any courtroom</li>
+          <li>Status updates push instantly — no page refresh, no phone calls to the clerk's desk</li>
+          <li>Shows attorney check-in and juvenile check-in status so families know when their case is moving</li>
+          <li>Accessible after login with a Public role — no staff credentials required</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📋</div>
+        <div class="feature-number">Module 02</div>
+        <div class="feature-title">Hearing Management</div>
+        <ul class="feature-list">
+          <li>Schedule, reschedule, and cancel hearings across all courtrooms from one interface</li>
+          <li>Check in attorneys and juveniles at the door — one click, instant broadcast</li>
+          <li>Update hearing status in real time: Scheduled → In Progress → Completed / Delayed</li>
+          <li>Flag interpreter required, detention status, and confidential judge notes</li>
+          <li>Per-hearing audit trail — every change is logged with timestamp and staff member</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📁</div>
+        <div class="feature-number">Module 03</div>
+        <div class="feature-title">Case Management</div>
+        <ul class="feature-list">
+          <li>Create and search cases: Delinquency, Dependency, Status Offense</li>
+          <li>Full case timeline — every hearing in chronological order for any case</li>
+          <li>Sealed/confidential flag — masked automatically from unauthorized views</li>
+          <li>Bulk case upload from JSON — import from an existing system in minutes</li>
+          <li>Respondent (juvenile) tracking with guardian name and contact information</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">⚖️</div>
+        <div class="feature-number">Module 04</div>
+        <div class="feature-title">Attorney Scheduling &amp; Conflict Detection</div>
+        <ul class="feature-list">
+          <li>Per-attorney daily schedule view across all courtrooms</li>
+          <li>Automatic conflict detection — flags double-bookings across rooms the moment they occur</li>
+          <li>Conflict resolution workflow — mark resolved once rescheduled, track history</li>
+          <li>Attorney availability check before scheduling a new hearing</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <div class="feature-number">Module 05</div>
+        <div class="feature-title">AI-Powered Duration Estimates</div>
+        <ul class="feature-list">
+          <li>AI agent generates p25/p75 duration estimates for each scheduled hearing</li>
+          <li>Estimates feed into the queue display so families see realistic wait times</li>
+          <li>Analytics track AI accuracy: mean absolute error vs. actual recorded duration</li>
+          <li>Estimates improve over time as the system observes your court's patterns</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <div class="feature-number">Module 06</div>
+        <div class="feature-title">Analytics Dashboard</div>
+        <ul class="feature-list">
+          <li>Today's docket at a glance: total hearings, completion rate, delayed, cancelled</li>
+          <li>Breakdown by case type — Delinquency, Dependency, Status Offense</li>
+          <li>Per-courtroom throughput — see which rooms are running behind</li>
+          <li>Conflict summary: unresolved, detected today, resolved today</li>
+          <li>AI accuracy panel: how well duration estimates matched reality</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔨</div>
+        <div class="feature-number">Module 07</div>
+        <div class="feature-title">Judge Dashboard</div>
+        <ul class="feature-list">
+          <li>Judge's own courtroom queue for the day — no noise from other rooms</li>
+          <li>One-click status updates from the bench: start, delay, complete</li>
+          <li>Upcoming hearing list with case type, attorney, and estimated duration</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">👔</div>
+        <div class="feature-number">Module 08</div>
+        <div class="feature-title">Attorney Portal</div>
+        <ul class="feature-list">
+          <li>Attorney's own daily schedule across all courtrooms in one view</li>
+          <li>Conflict visibility — see and track any scheduling overlaps</li>
+          <li>Availability check — see open slots before requesting a hearing date</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">📤</div>
+        <div class="feature-number">Module 09</div>
+        <div class="feature-title">Export &amp; Compliance</div>
+        <ul class="feature-list">
+          <li>Docket export to CSV — full day's hearings with case numbers, types, times, and attorneys</li>
+          <li>Audit log export — complete system event history for compliance or discovery requests</li>
+          <li>Every export is timestamped and attributed to the requesting staff member</li>
+        </ul>
+      </div>
+
+      <div class="feature-card">
+        <div class="feature-icon">🔐</div>
+        <div class="feature-number">Module 10</div>
+        <div class="feature-title">User &amp; Access Management</div>
+        <ul class="feature-list">
+          <li>Create and deactivate staff accounts — Admin, Clerk, Judge, Attorney, Public</li>
+          <li>Admin-initiated password resets, self-service password change for all users</li>
+          <li>Last login tracking across all accounts</li>
+          <li>Role-based access enforced at every level — API, middleware, and UI</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- WHO IT'S FOR -->
+<section id="roles" class="roles-bg">
+  <div class="container">
+    <span class="section-label">Role-Based Access</span>
+    <h2 class="section-title">One system. Every person in the courthouse.</h2>
+    <p class="section-sub">Every user sees exactly what they need — nothing more. Roles are enforced end-to-end, not just in the UI.</p>
+
+    <div class="roles-grid">
+      <div class="role-card">
+        <div class="role-icon">🏛️</div>
+        <div class="role-name">Administrator</div>
+        <div class="role-desc">Full system access. Manages users, monitors all courtrooms, exports data.</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">📝</div>
+        <div class="role-name">Court Clerk</div>
+        <div class="role-desc">Schedules hearings, manages check-ins, updates status, exports dockets.</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">🔨</div>
+        <div class="role-name">Judge</div>
+        <div class="role-desc">Their courtroom only. Starts, delays, and completes hearings from the bench.</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">👔</div>
+        <div class="role-name">Attorney</div>
+        <div class="role-desc">Their schedule and conflicts. Sees assigned cases and hearing timeline.</div>
+      </div>
+      <div class="role-card">
+        <div class="role-icon">👨‍👩‍👧</div>
+        <div class="role-name">Public</div>
+        <div class="role-desc">Live queue view only. Families track their hearing status after a simple sign-in.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AI SPOTLIGHT -->
+<section id="ai" class="ai-section">
+  <div class="container">
+    <div class="ai-inner">
+      <div>
+        <span class="section-label">AI Engine</span>
+        <h2 class="section-title">Stop guessing how long a hearing will take.</h2>
+        <p style="color:var(--slate); font-size:1rem; margin-bottom:1.5rem; line-height:1.7;">
+          OnDocket's built-in AI agent analyzes each hearing's case type, complexity, and history to generate a realistic duration estimate — not just the scheduled slot.
+        </p>
+        <ul class="feature-list" style="gap:.75rem;">
+          <li style="font-size:.925rem; color:var(--slate);">Confidence ranges (p25–p75) replace single-point guesses</li>
+          <li style="font-size:.925rem; color:var(--slate);">Families see realistic wait times in the public queue</li>
+          <li style="font-size:.925rem; color:var(--slate);">Judges and clerks get early warning when a room is running long</li>
+          <li style="font-size:.925rem; color:var(--slate);">Analytics dashboard tracks accuracy so you can see it working</li>
+        </ul>
+      </div>
+
+      <div class="ai-graphic">
+        <div class="ai-graphic-title">Live Queue — Room 3 · Today</div>
+
+        <div class="hearing-row">
+          <div class="hearing-info">
+            <div class="hearing-case">2025-JD-00142</div>
+            <div class="hearing-type">Adjudicatory · Smith, J.</div>
+          </div>
+          <div class="hearing-eta">
+            <div class="eta-range">25–35 min</div>
+            <div class="eta-label">AI estimate</div>
+          </div>
+          <span class="status-badge s-inprog">In Progress</span>
+        </div>
+
+        <div class="hearing-row">
+          <div class="hearing-info">
+            <div class="hearing-case">2025-DP-00089</div>
+            <div class="hearing-type">Review · Williams, M.</div>
+          </div>
+          <div class="hearing-eta">
+            <div class="eta-range">15–20 min</div>
+            <div class="eta-label">AI estimate</div>
+          </div>
+          <span class="status-badge s-sched">Scheduled</span>
+        </div>
+
+        <div class="hearing-row">
+          <div class="hearing-info">
+            <div class="hearing-case">2025-SO-00031</div>
+            <div class="hearing-type">Dispositional · Davis, K.</div>
+          </div>
+          <div class="hearing-eta">
+            <div class="eta-range">45–65 min</div>
+            <div class="eta-label">AI estimate</div>
+          </div>
+          <span class="status-badge s-sched">Scheduled</span>
+        </div>
+
+        <div class="hearing-row" style="opacity:.5;">
+          <div class="hearing-info">
+            <div class="hearing-case">2025-JD-00098</div>
+            <div class="hearing-type">Arraignment · Torres, R.</div>
+          </div>
+          <div class="hearing-eta">
+            <div class="eta-range">18 min</div>
+            <div class="eta-label">Actual</div>
+          </div>
+          <span class="status-badge s-done">Completed</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY ONDOCKET -->
+<section id="why" class="diff-bg">
+  <div class="container">
+    <span class="section-label">Why OnDocket</span>
+    <h2 class="section-title">Not a calendar. Not a spreadsheet. Built for courts.</h2>
+    <p class="section-sub">Generic tools create workarounds. OnDocket eliminates them.</p>
+
+    <div class="diff-grid">
+      <div class="diff-card">
+        <div class="diff-card-icon">⚡</div>
+        <div class="diff-card-title">Real-Time, Court-Wide</div>
+        <div class="diff-card-body">Any status change — check-in, delay, completion — is visible across every screen in the courthouse within seconds. No refresh. No phone tree.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-card-icon">🔒</div>
+        <div class="diff-card-title">Sealed Cases Stay Sealed</div>
+        <div class="diff-card-body">Confidential case masking is automatic and enforced at the API level. No one can accidentally display a sealed record by forgetting to filter a column.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-card-icon">🔍</div>
+        <div class="diff-card-title">Conflicts Caught Instantly</div>
+        <div class="diff-card-body">Attorney double-bookings are detected the moment they happen — not discovered by a clerk the morning of. Resolution is tracked in the same system.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-card-icon">⏱️</div>
+        <div class="diff-card-title">Fewer Calls to the Clerk's Desk</div>
+        <div class="diff-card-body">AI wait-time estimates give families a realistic answer before they ever pick up the phone. The public queue is self-serve after a simple login.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-card-icon">📑</div>
+        <div class="diff-card-title">Defensible Audit Trail</div>
+        <div class="diff-card-body">Every status update, check-in, note, and reschedule is logged with the acting user and timestamp — ready for any compliance review or discovery request.</div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-card-icon">🎭</div>
+        <div class="diff-card-title">Access Enforced End-to-End</div>
+        <div class="diff-card-body">Role-based permissions are applied at the API, the middleware, and the UI simultaneously. Attorneys can't see other attorneys' confidential notes by tweaking a URL.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section id="contact" class="cta-section">
+  <div class="container">
+    <h2>Ready to see OnDocket in your courtroom?</h2>
+    <p>We'll walk you through a live demo using your court's case types, room layout, and staff roles — no generic slides.</p>
+    <div class="cta-group">
+      <a href="mailto:hello@narrahq.co" class="btn-primary">Request a Demo</a>
+      <a href="mailto:hello@narrahq.co" class="btn-outline">Contact Sales</a>
+    </div>
+    <p style="margin-top:2rem; font-size:.85rem; color:rgba(255,255,255,.45);">
+      Or reach us directly at <a href="mailto:hello@narrahq.co" class="contact-link">hello@narrahq.co</a>
+    </p>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="foot-logo">On<span>Docket</span></div>
+  <div class="foot-copy">© 2025 OnDocket. Court Case Management Software.</div>
+</footer>
+
+</body>
+</html>

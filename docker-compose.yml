@@ -1,0 +1,78 @@
+name: court-mgmt-dev
+
+services:
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       court_mgmt
+      POSTGRES_USER:     court
+      POSTGRES_PASSWORD: court
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:     ["CMD-SHELL", "pg_isready -U court -d court_mgmt"]
+      interval: 5s
+      timeout:  5s
+      retries:  10
+
+  # ── Redis (ETA cache + optional session store) ──────────────────────────────
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: redis-server --save "" --appendonly no
+
+  # ── FastAPI backend (hot-reload) ────────────────────────────────────────────
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload"
+    volumes:
+      - ./backend:/app
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://court:court@db:5432/court_mgmt
+      ENVIRONMENT:  development
+      REDIS_URL:    redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    healthcheck:
+      test:     ["CMD-SHELL", "curl -fsS http://localhost:8000/health | grep -q '\"status\"'"]
+      interval: 15s
+      timeout:  5s
+      retries:  5
+      start_period: 20s
+
+  # ── Next.js frontend (hot-reload) ───────────────────────────────────────────
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    restart: unless-stopped
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./frontend:/app
+      - frontend_nm:/app/node_modules
+      - frontend_next:/app/.next
+    environment:
+      NEXT_PUBLIC_API_URL:   http://localhost:8000
+      NEXT_PUBLIC_WS_BASE:   ws://localhost:8000
+      INTERNAL_API_URL:      http://backend:8000
+      JWT_SECRET:            "${SECRET_KEY:-dev-secret-change-me-in-production}"
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  frontend_nm:
+  frontend_next:
