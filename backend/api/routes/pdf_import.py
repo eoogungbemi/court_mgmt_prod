@@ -142,18 +142,18 @@ def _parse_datetime(date_str: str, time_str: str) -> datetime:
     return (naive - eastern_offset).replace(tzinfo=timezone.utc)
 
 
-def _extract_with_claude(pdf_bytes: bytes) -> dict:
-    """Send the PDF to Claude and return the parsed JSON payload."""
+async def _extract_with_claude(pdf_bytes: bytes) -> dict:
+    """Send the PDF to Claude (async) and return the parsed JSON payload."""
     if not ANTHROPIC_API_KEY:
         raise HTTPException(
             status_code=503,
             detail="ANTHROPIC_API_KEY is not configured; PDF extraction is unavailable.",
         )
 
-    client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+    client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
     b64 = base64.standard_b64encode(pdf_bytes).decode()
 
-    message = client.messages.create(
+    message = await client.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=16000,
         messages=[
@@ -175,9 +175,17 @@ def _extract_with_claude(pdf_bytes: bytes) -> dict:
     )
 
     text = message.content[0].text.strip()
+    logger.info("Claude extraction: stop_reason=%s output_tokens=%s",
+                message.stop_reason, message.usage.output_tokens)
+
     # Strip accidental markdown fences
     text = re.sub(r"^```(?:json)?\s*", "", text)
     text = re.sub(r"\s*```$", "", text)
+
+    if message.stop_reason == "max_tokens":
+        logger.warning("Claude response was truncated — output_tokens=%s; JSON may be incomplete",
+                       message.usage.output_tokens)
+
     return json.loads(text)
 
 
@@ -298,11 +306,16 @@ async def preview_pdf(
         raise HTTPException(status_code=413, detail="PDF must be under 20 MB.")
 
     try:
-        extracted = _extract_with_claude(pdf_bytes)
+        extracted = await _extract_with_claude(pdf_bytes)
     except json.JSONDecodeError as exc:
+        logger.error("Claude returned unparseable JSON: %s", exc)
         raise HTTPException(status_code=422, detail=f"Claude returned unparseable JSON: {exc}")
     except anthropic.APIError as exc:
+        logger.error("Anthropic API error: %s", exc)
         raise HTTPException(status_code=502, detail=f"Claude API error: {exc}")
+    except Exception as exc:
+        logger.exception("Unexpected error during PDF extraction")
+        raise HTTPException(status_code=500, detail=f"Extraction failed: {exc}")
 
     rows = _build_preview_rows(extracted, db)
 
