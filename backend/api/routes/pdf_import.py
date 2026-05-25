@@ -24,6 +24,8 @@ from config import ANTHROPIC_API_KEY
 from db.database import get_db
 from db.models import Accused, AuditLog, Case, Courtroom, Hearing, Judge, User
 from schemas.pdf_import import (
+    AddJudgeRequest,
+    AddJudgeResponse,
     PDFConfirmRequest,
     PDFHearingPreviewRow,
     PDFImportPreviewResponse,
@@ -396,4 +398,57 @@ def confirm_import(
         cases_created    = cases_created,
         skipped          = skipped,
         errors           = errors,
+    )
+
+
+@router.post("/add-judge", response_model=AddJudgeResponse, status_code=201)
+def add_judge_to_system(
+    body: AddJudgeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = AnyAuthenticated,
+):
+    """
+    Register a new judge or hearing officer encountered during PDF import.
+    Creates a new Courtroom and links the Judge to it.
+    If a judge with the same name already exists, returns that record.
+    """
+    existing = db.execute(
+        select(Judge).where(Judge.name.ilike(f"%{body.name}%"))
+    ).scalar_one_or_none()
+    if existing:
+        room = db.get(Courtroom, existing.courtroom_id)
+        return AddJudgeResponse(
+            id             = existing.id,
+            name           = existing.name,
+            courtroom_id   = existing.courtroom_id,
+            courtroom_name = room.name if room else "",
+        )
+
+    courtroom = Courtroom(name=body.courtroom_name.strip(), floor=body.floor)
+    db.add(courtroom)
+    db.flush()
+
+    judge = Judge(name=body.name.strip(), courtroom_id=courtroom.id)
+    db.add(judge)
+    db.flush()
+
+    db.add(AuditLog(
+        event_type  = "JUDGE_ADDED",
+        agent_name  = current_user.username,
+        entity_type = "judge",
+        entity_id   = judge.id,
+        payload     = json.dumps({
+            "name":           judge.name,
+            "courtroom_name": courtroom.name,
+            "floor":          courtroom.floor,
+        }),
+    ))
+    db.commit()
+    db.refresh(judge)
+
+    return AddJudgeResponse(
+        id             = judge.id,
+        name           = judge.name,
+        courtroom_id   = judge.courtroom_id,
+        courtroom_name = courtroom.name,
     )

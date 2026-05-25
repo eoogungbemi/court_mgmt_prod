@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { FileUp, X, AlertTriangle, CheckCircle2, PlusCircle, Loader2 } from "lucide-react";
+import { FileUp, X, AlertTriangle, CheckCircle2, PlusCircle, Loader2, UserPlus } from "lucide-react";
 import { pdfImport } from "@/lib/api";
 import type {
   PDFHearingPreviewRow,
@@ -9,6 +9,7 @@ import type {
   PDFImportResult,
 } from "@/lib/types";
 import Button from "@/components/ui/Button";
+import Input  from "@/components/ui/Input";
 
 type Step = "upload" | "preview" | "done";
 
@@ -119,6 +120,93 @@ function UploadStep({
   );
 }
 
+// ── Add judge panel ───────────────────────────────────────────────────────────
+
+function AddJudgePanel({
+  judgeName,
+  onAdded,
+}: {
+  judgeName: string;
+  onAdded: (judgeId: number, courtroomId: number) => void;
+}) {
+  const [name,     setName]     = useState(judgeName);
+  const [room,     setRoom]     = useState("");
+  const [floor,    setFloor]    = useState("1");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState("");
+  const [added,    setAdded]    = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!room.trim()) { setError("Courtroom name is required"); return; }
+    setError("");
+    setLoading(true);
+    try {
+      const res = await pdfImport.addJudge(name.trim(), room.trim(), Number(floor)) as {
+        id: number; name: string; courtroom_id: number; courtroom_name: string;
+      };
+      setAdded(true);
+      onAdded(res.id, res.courtroom_id);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to add judge");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  if (added) {
+    return (
+      <div className="flex items-center gap-2 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-sm text-green-700">
+        <CheckCircle2 className="h-4 w-4 shrink-0" />
+        <strong>{name}</strong> added — affected rows are now importable.
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={submit} className="rounded-md border border-amber-200 bg-white px-4 py-3 space-y-3">
+      <p className="text-xs font-semibold text-amber-800 flex items-center gap-1.5">
+        <UserPlus className="h-3.5 w-3.5" />
+        Add <strong>{judgeName}</strong> to the system
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="col-span-2 sm:col-span-1">
+          <Input
+            label="Name (as it appears on docket)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+        </div>
+        <div className="col-span-2 sm:col-span-1">
+          <Input
+            label="Courtroom / location name"
+            placeholder="e.g. Unified Family Court"
+            value={room}
+            onChange={(e) => setRoom(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <Input
+            label="Floor"
+            type="number"
+            value={floor}
+            onChange={(e) => setFloor(e.target.value)}
+            required
+          />
+        </div>
+      </div>
+      {error && <p className="text-xs text-red-600">{error}</p>}
+      <div className="flex justify-end">
+        <Button type="submit" size="sm" loading={loading}>
+          Add to system
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 // ── Preview step ──────────────────────────────────────────────────────────────
 
 function PreviewStep({
@@ -136,6 +224,26 @@ function PreviewStep({
   const [complexity, setComplexity] = useState("medium");
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState("");
+
+  // Unique judge names that caused "not found" errors
+  const unknownJudges = [...new Set(
+    rows
+      .filter((r) => r.match_status === "error" && r.issues.some((i) => i.includes("not found in the system")))
+      .map((r) => r.judge_name)
+      .filter(Boolean)
+  )];
+
+  function resolveJudge(judgeName: string, judgeId: number, courtroomId: number) {
+    setRows((prev) => prev.map((row) => {
+      if (row.judge_name !== judgeName) return row;
+      const remaining = row.issues.filter((i) => !i.includes("not found in the system"));
+      if (remaining.length > 0) {
+        return { ...row, judge_id: judgeId, courtroom_id: courtroomId, issues: remaining };
+      }
+      const newStatus = row.case_id ? "matched" : "new_case";
+      return { ...row, judge_id: judgeId, courtroom_id: courtroomId, issues: [], match_status: newStatus, include: true };
+    }));
+  }
 
   function toggle(idx: number) {
     setRows((prev) => prev.map((r, i) => i === idx ? { ...r, include: !r.include } : r));
@@ -163,22 +271,47 @@ function PreviewStep({
 
   return (
     <div className="space-y-4">
-      {/* Summary bar */}
-      <div className="flex flex-wrap gap-3 text-sm">
-        <span className="text-gray-500">
-          <strong className="text-gray-900">{preview.total_rows}</strong> hearings on{" "}
-          <strong className="text-gray-900">{preview.hearing_date}</strong>
-          {preview.judge_name && ` · ${preview.judge_name}`}
-        </span>
-        <span className="text-green-700">{preview.matched} matched</span>
-        <span className="text-amber-700">{preview.new_cases} new cases</span>
-        {preview.errors > 0 && (
-          <span className="text-red-700">{preview.errors} errors</span>
-        )}
-      </div>
+      {/* Unknown judge panel — shown whenever a presiding officer isn't in the system */}
+      {unknownJudges.length > 0 && (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 space-y-3">
+          <p className="flex items-center gap-2 text-sm font-semibold text-amber-800">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {unknownJudges.length === 1
+              ? `${unknownJudges[0]} is not in the system`
+              : `${unknownJudges.length} presiding officers not in the system`}
+            <span className="font-normal text-amber-700">— add them below to enable import</span>
+          </p>
+          {unknownJudges.map((name) => (
+            <AddJudgePanel
+              key={name}
+              judgeName={name}
+              onAdded={(judgeId, courtroomId) => resolveJudge(name, judgeId, courtroomId)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Summary bar — derived from live rows so counts update after judge resolution */}
+      {(() => {
+        const liveMatched  = rows.filter((r) => r.match_status === "matched").length;
+        const liveNew      = rows.filter((r) => r.match_status === "new_case").length;
+        const liveErrors   = rows.filter((r) => r.match_status === "error").length;
+        return (
+          <div className="flex flex-wrap gap-3 text-sm">
+            <span className="text-gray-500">
+              <strong className="text-gray-900">{preview.total_rows}</strong> hearings on{" "}
+              <strong className="text-gray-900">{preview.hearing_date}</strong>
+              {preview.judge_name && ` · ${preview.judge_name}`}
+            </span>
+            {liveMatched > 0  && <span className="text-green-700">{liveMatched} matched</span>}
+            {liveNew > 0      && <span className="text-amber-700">{liveNew} new cases</span>}
+            {liveErrors > 0   && <span className="text-red-700">{liveErrors} errors</span>}
+          </div>
+        );
+      })()}
 
       {/* Complexity selector for new cases */}
-      {preview.new_cases > 0 && (
+      {rows.some((r) => r.match_status === "new_case") && (
         <div className="flex items-center gap-2 text-sm">
           <label className="text-gray-600 shrink-0">Default complexity for new cases:</label>
           <select

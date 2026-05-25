@@ -50,3 +50,16 @@ class PDFImportResult(BaseModel):
     cases_created: int
     skipped: int
     errors: list[str]
+
+
+class AddJudgeRequest(BaseModel):
+    name: str
+    courtroom_name: str
+    floor: int = 1
+
+
+class AddJudgeResponse(BaseModel):
+    id: int
+    name: str
+    courtroom_id: int
+    courtroom_name: str

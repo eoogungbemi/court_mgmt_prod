@@ -201,6 +201,12 @@ export const pdfImport = {
 
   confirm: (body: unknown) =>
     request("/pdf-import/confirm", { method: "POST", body: JSON.stringify(body) }),
+
+  addJudge: (name: string, courtroom_name: string, floor: number) =>
+    request("/pdf-import/add-judge", {
+      method: "POST",
+      body: JSON.stringify({ name, courtroom_name, floor }),
+    }),
 };
 
 export { ApiError };
