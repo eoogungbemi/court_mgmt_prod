@@ -69,37 +69,50 @@ DEFAULT_DURATION_MINS: dict[str, int] = {
 }
 
 EXTRACTION_PROMPT = """
-You are extracting structured data from an Allegheny County Court hearing list PDF.
+You are a careful legal data extraction assistant.
 
-Read EVERY page of the document and extract ALL hearing rows across all pages.
+I have uploaded a court hearing list PDF. Extract ALL data from the document, judge by judge, without skipping any entry.
 
 Return ONLY a JSON object — no markdown, no explanation — with this exact structure:
 
 {
   "hearing_date": "YYYY-MM-DD",
-  "judge_name": "Firstname Lastname",
-  "rows": [
+  "judges": [
     {
-      "row_index": 1,
-      "time": "HH:MM",
-      "participant": "Lastname Firstname",
-      "fid_number": "02-FN-XXXXXX-YYYY or null",
-      "juv_id": "JPXXXX or null",
-      "docket_number": "CP-02-DP-XXXXXXX-YYYY",
-      "calendar_event": "Permanency Review Hearing",
-      "case_worker_po": "Lastname Firstname; Lastname Firstname or null"
+      "judge_name": "Full Name exactly as written in the document",
+      "total_events_stated": 12,
+      "rows": [
+        {
+          "row_index": 1,
+          "time": "HH:MM",
+          "participant": "Lastname Firstname",
+          "fid_number": "02-FN-XXXXXX-YYYY or null",
+          "juv_id": "JPXXXX or null",
+          "docket_number": "CP-02-DP-XXXXXXX-YYYY",
+          "calendar_event": "Permanency Review Hearing",
+          "case_worker_po": "Lastname Firstname; Lastname Firstname or null"
+        }
+      ]
     }
   ]
 }
 
-Rules:
-- Extract every numbered hearing row from every page — do not stop at the end of page 1
-- row_index must be sequential across all pages (1, 2, 3 … N)
-- time must be in 24-hour HH:MM format (e.g. "09:00", "13:30")
-- participant should be "Lastname Firstname" title case, no comma
-- Multiple case workers must be separated by semicolons
-- juv_id should only contain the JP... identifier if one appears in the Juv ID column; otherwise null
-- docket_number is the CP-... number only (not the JP... part)
+Critical rules — follow every one:
+1. Process EVERY page of the document. Do not stop at page 1.
+2. Include a separate entry in "judges" for every judge or hearing officer section found.
+3. row_index must be globally sequential across all judges (1, 2, 3 … N total).
+4. If one numbered entry contains multiple docket numbers, participants, or event types, create a SEPARATE row for each distinct docket/event.
+5. Do NOT merge different docket numbers into one row.
+6. Do NOT omit repeated participants — if the same name appears with a different docket or event type, list each occurrence as its own row.
+7. Handle wrapped lines carefully: participant names, hearing types, and case worker names may wrap onto the next line — join them before outputting.
+8. Separate joined fields: a Juv. ID (JP...) immediately followed by a docket number (CP-...) must be split into their respective fields.
+9. time must be 24-hour HH:MM (e.g. "09:00", "13:30"). If a row shares the prior row's time, repeat it.
+10. participant: "Lastname Firstname" title case, no comma.
+11. Multiple case workers separated by semicolons.
+12. juv_id: only the JP... identifier; null if the column is blank.
+13. docket_number: the CP-... number only (not the JP... part).
+14. total_events_stated: copy the exact integer shown as "Total Events Scheduled" in the PDF for that judge/hearing officer section.
+15. Use null for any field that is blank in the document. Never guess or fabricate values.
 """
 
 
@@ -141,7 +154,7 @@ def _extract_with_claude(pdf_bytes: bytes) -> dict:
     b64 = base64.standard_b64encode(pdf_bytes).decode()
 
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-6",
         max_tokens=16000,
         messages=[
             {
@@ -168,20 +181,20 @@ def _extract_with_claude(pdf_bytes: bytes) -> dict:
     return json.loads(text)
 
 
-def _build_preview_rows(
-    extracted: dict,
+def _resolve_rows_for_judge(
+    judge_name: str,
+    raw_rows: list[dict],
+    hearing_date: str,
     db: Session,
+    global_index: list[int],  # mutable counter shared across judges
 ) -> list[PDFHearingPreviewRow]:
-    rows: list[PDFHearingPreviewRow] = []
-    hearing_date = extracted.get("hearing_date", "")
-    judge_name   = extracted.get("judge_name", "")
-
-    # Resolve judge once for all rows
+    """Build preview rows for a single judge section."""
     judge_record: Judge | None = db.execute(
         select(Judge).where(Judge.name.ilike(f"%{judge_name}%"))
     ).scalar_one_or_none()
 
-    for raw in extracted.get("rows", []):
+    rows: list[PDFHearingPreviewRow] = []
+    for raw in raw_rows:
         issues: list[str] = []
         judge_id     = judge_record.id          if judge_record else None
         courtroom_id = judge_record.courtroom_id if judge_record else None
@@ -189,14 +202,13 @@ def _build_preview_rows(
         if not judge_record:
             issues.append(f"Judge '{judge_name}' not found in the system")
 
-        docket = raw.get("docket_number", "")
-        case_type = _case_type_from_docket(docket)
+        docket       = raw.get("docket_number", "")
+        case_type    = _case_type_from_docket(docket)
         hearing_type = _normalise_hearing_type(raw.get("calendar_event", ""))
 
-        # Try to match an existing case by docket number
         existing: Case | None = db.execute(
             select(Case).where(Case.case_number == docket)
-        ).scalar_one_or_none()
+        ).scalar_one_or_none() if docket else None
 
         case_id              = existing.id          if existing else None
         existing_case_number = existing.case_number if existing else None
@@ -204,7 +216,6 @@ def _build_preview_rows(
         if not docket:
             issues.append("Missing docket number")
 
-        match_status: str
         if issues:
             match_status = "error"
         elif existing:
@@ -212,9 +223,10 @@ def _build_preview_rows(
         else:
             match_status = "new_case"
 
+        global_index[0] += 1
         rows.append(
             PDFHearingPreviewRow(
-                row_index            = raw.get("row_index", len(rows) + 1),
+                row_index            = global_index[0],
                 participant          = raw.get("participant", ""),
                 fid_number           = raw.get("fid_number"),
                 juv_id               = raw.get("juv_id"),
@@ -234,8 +246,34 @@ def _build_preview_rows(
                 issues               = issues,
             )
         )
-
     return rows
+
+
+def _build_preview_rows(
+    extracted: dict,
+    db: Session,
+) -> list[PDFHearingPreviewRow]:
+    hearing_date  = extracted.get("hearing_date", "")
+    global_index  = [0]  # mutable so sub-function can increment it
+    all_rows: list[PDFHearingPreviewRow] = []
+
+    # New multi-judge format: {"judges": [{judge_name, rows}, ...]}
+    if "judges" in extracted:
+        for section in extracted["judges"]:
+            judge_name = section.get("judge_name", "")
+            raw_rows   = section.get("rows", [])
+            all_rows.extend(
+                _resolve_rows_for_judge(judge_name, raw_rows, hearing_date, db, global_index)
+            )
+    else:
+        # Fallback: old single-judge format {"judge_name": ..., "rows": [...]}
+        judge_name = extracted.get("judge_name", "")
+        raw_rows   = extracted.get("rows", [])
+        all_rows.extend(
+            _resolve_rows_for_judge(judge_name, raw_rows, hearing_date, db, global_index)
+        )
+
+    return all_rows
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -268,9 +306,16 @@ async def preview_pdf(
 
     rows = _build_preview_rows(extracted, db)
 
+    # Build a display-friendly judge name summary
+    if "judges" in extracted:
+        judge_names = [s.get("judge_name", "") for s in extracted["judges"] if s.get("judge_name")]
+        judge_display = ", ".join(judge_names)
+    else:
+        judge_display = extracted.get("judge_name", "")
+
     return PDFImportPreviewResponse(
         hearing_date = extracted.get("hearing_date", ""),
-        judge_name   = extracted.get("judge_name", ""),
+        judge_name   = judge_display,
         total_rows   = len(rows),
         matched      = sum(1 for r in rows if r.match_status == "matched"),
         new_cases    = sum(1 for r in rows if r.match_status == "new_case"),
