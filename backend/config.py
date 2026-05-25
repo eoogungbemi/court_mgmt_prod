@@ -45,7 +45,7 @@ LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT", "court-mgmt-prod")
 LANGSMITH_TRACING = os.getenv("LANGSMITH_TRACING", "false").lower() == "true"
 
 # ── Court configuration ───────────────────────────────────────────────────────
-NUM_COURTROOMS = 20
+NUM_COURTROOMS = 10
 NUM_LAWYERS = 40
 COURT_START_HOUR = 9
 COURT_END_HOUR = 17

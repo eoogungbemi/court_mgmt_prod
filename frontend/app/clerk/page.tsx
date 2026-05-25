@@ -3,8 +3,9 @@ import Link         from "next/link";
 import { Users, Clock, AlertTriangle, TriangleAlert } from "lucide-react";
 import { formatTime, todayDateString } from "@/lib/auth";
 import type { MeResponse, CourtroomOverview, ConflictDetail } from "@/lib/types";
-import PageLayout from "@/components/layout/PageLayout";
-import Card       from "@/components/ui/Card";
+import PageLayout      from "@/components/layout/PageLayout";
+import Card            from "@/components/ui/Card";
+import PDFImportButton from "@/components/ui/PDFImportButton";
 
 async function fetchJson<T>(path: string, cookieHeader: string): Promise<T | null> {
   const base = process.env.INTERNAL_API_URL ?? "http://backend:8000";
@@ -100,6 +101,11 @@ export default async function ClerkOverviewPage() {
         </div>
       )}
 
+      {/* ── Actions bar ───────────────────────────────────────────────────── */}
+      <div className="mb-4 flex justify-end">
+        <PDFImportButton />
+      </div>
+
       {/* ── Summary strip ─────────────────────────────────────────────────── */}
       <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
         <div className="rounded-lg bg-court-navy p-4 text-white">
@@ -131,7 +137,7 @@ export default async function ClerkOverviewPage() {
                 <div>
                   <p className="font-semibold text-court-navy">{cr.name}</p>
                   <p className="mt-0.5 text-xs text-gray-500">
-                    {cr.judge_name ? `Hon. ${cr.judge_name}` : "Judge TBD"}
+                    {cr.judge_name ?? "Judge TBD"}
                     {" · Floor "}{cr.floor}
                   </p>
                 </div>

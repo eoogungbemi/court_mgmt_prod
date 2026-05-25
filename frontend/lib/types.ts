@@ -233,3 +233,46 @@ export interface UserOut {
   created_at: string;
   last_login: string | null;
 }
+
+// ── PDF Import ────────────────────────────────────────────────────────────────
+
+export type PDFMatchStatus = "matched" | "new_case" | "error";
+
+export interface PDFHearingPreviewRow {
+  row_index:            number;
+  participant:          string;
+  fid_number:           string | null;
+  juv_id:               string | null;
+  docket_number:        string;
+  calendar_event:       string;
+  hearing_type:         string;
+  date:                 string;
+  time:                 string;
+  judge_name:           string;
+  case_worker_po:       string | null;
+  judge_id:             number | null;
+  courtroom_id:         number | null;
+  case_id:              number | null;
+  existing_case_number: string | null;
+  case_type:            string;
+  match_status:         PDFMatchStatus;
+  issues:               string[];
+  include:              boolean;
+}
+
+export interface PDFImportPreviewResponse {
+  hearing_date: string;
+  judge_name:   string;
+  total_rows:   number;
+  matched:      number;
+  new_cases:    number;
+  errors:       number;
+  rows:         PDFHearingPreviewRow[];
+}
+
+export interface PDFImportResult {
+  hearings_created: number;
+  cases_created:    number;
+  skipped:          number;
+  errors:           string[];
+}

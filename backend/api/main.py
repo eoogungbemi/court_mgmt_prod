@@ -20,6 +20,7 @@ from api.limiter import limiter
 from api.routes import (
     auth, users, courtrooms, cases,
     hearings, attorneys, conflicts, export, agents, ws, analytics,
+    pdf_import,
 )
 
 configure_logging()
@@ -109,6 +110,7 @@ app.include_router(export.router,     prefix="/api")
 app.include_router(agents.router,     prefix="/api")
 app.include_router(ws.router,         prefix="/api")
 app.include_router(analytics.router,  prefix="/api")
+app.include_router(pdf_import.router, prefix="/api")
 
 
 # ── Health ────────────────────────────────────────────────────────────────────

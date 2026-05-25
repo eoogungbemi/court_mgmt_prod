@@ -180,4 +180,27 @@ export const users = {
   reactivate:    (id: number)                => request(`/users/${id}`, { method: "PATCH", body: JSON.stringify({ is_active: true }) }),
 };
 
+// ── PDF Import ────────────────────────────────────────────────────────────────
+
+export const pdfImport = {
+  preview: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${BASE}/pdf-import/preview`, {
+      method:      "POST",
+      credentials: "include",
+      body:        form,
+    }).then(async (res) => {
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new ApiError(res.status, body.detail ?? res.statusText);
+      }
+      return res.json();
+    });
+  },
+
+  confirm: (body: unknown) =>
+    request("/pdf-import/confirm", { method: "POST", body: JSON.stringify(body) }),
+};
+
 export { ApiError };

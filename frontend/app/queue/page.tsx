@@ -139,7 +139,7 @@ export default function QueuePage() {
                   <div>
                     <span className="font-semibold text-court-navy">{cr.name}</span>
                     {cr.judge_name && (
-                      <span className="ml-2 text-sm text-gray-500">· Hon. {cr.judge_name}</span>
+                      <span className="ml-2 text-sm text-gray-500">· {cr.judge_name}</span>
                     )}
                   </div>
                   <span className="text-xs text-gray-400">

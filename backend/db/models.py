@@ -59,7 +59,7 @@ class Case(Base):
     complexity        = Column(String, nullable=False)   # low | medium | high
     status            = Column(String, default="active") # active | closed
     is_confidential   = Column(Boolean, default=False)
-    defense_lawyer_id = Column(Integer, ForeignKey("lawyers.id"), nullable=False)
+    defense_lawyer_id = Column(Integer, ForeignKey("lawyers.id"), nullable=True)
 
     defense_lawyer = relationship("Lawyer", back_populates="cases")
     # Primary respondent shortcut (first by id); use .respondents for all.

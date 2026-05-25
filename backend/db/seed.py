@@ -90,10 +90,24 @@ def create_courtrooms(db: Session) -> list[Courtroom]:
     return rooms
 
 
+ALLEGHENY_JUDICIARY = [
+    "Judge Jennifer McCrady",
+    "Judge Eleanor Bush",
+    "Judge Paul Cozza",
+    "Judge Lisa Middleman",
+    "Judge Tiffany Sizemore",
+    "Judge David Spurgeon",
+    "Judge Wrenna Watson",
+    "Judge Dwayne Woodruff",
+    "Judge Kim Clark",
+    "Gina Ziady",
+]
+
+
 def create_judges(db: Session, courtrooms: list[Courtroom]) -> list[Judge]:
     judges = []
-    for room in courtrooms:
-        judge = Judge(name=f"Hon. {fake.last_name()}", courtroom_id=room.id)
+    for room, name in zip(courtrooms, ALLEGHENY_JUDICIARY):
+        judge = Judge(name=name, courtroom_id=room.id)
         db.add(judge)
         judges.append(judge)
     db.flush()

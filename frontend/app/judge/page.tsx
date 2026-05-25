@@ -56,7 +56,7 @@ export default async function JudgePage() {
         <p className="text-sm">Court of Common Pleas — Family Division, Juvenile Branch</p>
         <p className="text-sm">{myRoom?.name ?? "Courtroom"} · {dateLabel}</p>
         {myRoom?.judge_name && (
-          <p className="text-sm">Presiding: Hon. {myRoom.judge_name}</p>
+          <p className="text-sm">Presiding: {myRoom.judge_name}</p>
         )}
         <hr className="my-3" />
       </div>
