@@ -94,9 +94,10 @@ export default function QueuePage() {
   const [overview, setOverview]   = useState<CourtroomOverview[]>([]);
   const [loading,  setLoading]    = useState(true);
   const [lastRefresh, setRefresh] = useState(new Date());
-  const date                      = todayDateString();
+  const [date,     setDate]       = useState(todayDateString());
 
   const loadOverview = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await courtrooms.overview(date) as CourtroomOverview[];
       setOverview(data);
@@ -117,14 +118,22 @@ export default function QueuePage() {
 
       <main className="mx-auto max-w-7xl px-4 py-6">
         {/* Header */}
-        <div className="mb-6 flex items-start justify-between">
+        <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-court-navy">Live Courtroom Queue</h1>
-            <p className="mt-1 text-sm text-gray-500">{formatDate(new Date().toISOString())}</p>
+            <p className="mt-1 text-sm text-gray-500">{formatDate(new Date(date + "T12:00:00").toISOString())}</p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Updated {lastRefresh.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+          <div className="flex items-center gap-3 shrink-0">
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-court-navy"
+            />
+            <div className="flex items-center gap-1.5 text-xs text-gray-400">
+              <RefreshCw className="h-3.5 w-3.5" />
+              {lastRefresh.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}
+            </div>
           </div>
         </div>
 
