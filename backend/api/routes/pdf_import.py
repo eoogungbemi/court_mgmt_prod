@@ -71,6 +71,8 @@ DEFAULT_DURATION_MINS: dict[str, int] = {
 EXTRACTION_PROMPT = """
 You are extracting structured data from an Allegheny County Court hearing list PDF.
 
+Read EVERY page of the document and extract ALL hearing rows across all pages.
+
 Return ONLY a JSON object — no markdown, no explanation — with this exact structure:
 
 {
@@ -91,12 +93,13 @@ Return ONLY a JSON object — no markdown, no explanation — with this exact st
 }
 
 Rules:
+- Extract every numbered hearing row from every page — do not stop at the end of page 1
+- row_index must be sequential across all pages (1, 2, 3 … N)
 - time must be in 24-hour HH:MM format (e.g. "09:00", "13:30")
 - participant should be "Lastname Firstname" title case, no comma
 - Multiple case workers must be separated by semicolons
 - juv_id should only contain the JP... identifier if one appears in the Juv ID column; otherwise null
 - docket_number is the CP-... number only (not the JP... part)
-- Include every numbered hearing row
 """
 
 
@@ -139,7 +142,7 @@ def _extract_with_claude(pdf_bytes: bytes) -> dict:
 
     message = client.messages.create(
         model="claude-haiku-4-5-20251001",
-        max_tokens=4096,
+        max_tokens=16000,
         messages=[
             {
                 "role": "user",
